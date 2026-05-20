@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>تدريب الأيم - صائد الأهداف | جوي ستيك ببجي + صور</title>
+    <style>
+        * {
+            user-select: none;
+            touch-action: pan-y pinch-zoom;
+        }
+
+        body {
+            margin: 0;
+            padding: 15px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a1f0a;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            background: #2c1a0e;
+            border-radius: 60px;
+            padding: 20px;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.5);
+            max-width: 100%;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            cursor: crosshair;
+            width: 100%;
+            height: auto;
+            background: #1e3a2f;
+        }
+
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1f1409;
+            margin-top: 15px;
+            padding: 10px 20px;
+            border-radius: 100px;
+            color: gold;
+            font-weight: bold;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .score-box, .hits-box {
+            background: #000000aa;
+            padding: 5px 15px;
+            border-radius: 40px;
+            font-size: 1.4rem;
+            white-space: nowrap;
+        }
+
+        .reset-btn {
+            background: #d4af37;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: bold;
+            padding: 5px 18px;
+            border-radius: 40px;
+            color: #2c1a0e;
+            cursor: pointer;
+        }
+
+        .joystick-area {
+            background: rgba(0,0,0,0.3);
+            border-radius: 140px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            margin-top: 20px;
+            backdrop-filter: blur(4px);
+        }
+
+        #joystickCanvas {
+            background: rgba(30,30,40,0.5);
+            border-radius: 200px;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.2), inset 0 0 0 2px rgba(255,255,255,0.1);
+            cursor: grab;
+            width: 180px;
+            height: 180px;
+        }
+        #joystickCanvas:active { cursor: grabbing; }
+
+        .controls-panel {
+            background: #1f1409cc;
+            backdrop-filter: blur(8px);
+            border-radius: 50px;
+            padding: 12px 20px;
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #2a1f15;
+            padding: 5px 12px;
+            border-radius: 40px;
+        }
+        .control-group label {
+            color: #ffdd99;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        .control-group input {
+            width: 90px;
+            padding: 4px;
+            border-radius: 20px;
+            border: none;
+            text-align: center;
+            background: #f0e0c0;
+        }
+        .control-group input[type="range"] {
+            width: 110px;
+        }
+        .control-group span {
+            color: #ffdd99;
+            min-width: 30px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        .bg-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+        .choose-file-btn, .reset-bg-btn {
+            background: #2a5f3a;
+            border: none;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: bold;
+            padding: 8px 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.1s;
+            box-shadow: 0 2px 0 #1a3a22;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .reset-bg-btn {
+            background: #8b5a2b;
+            box-shadow: 0 2px 0 #5a3a1a;
+        }
+        .choose-file-btn:active, .reset-bg-btn:active { transform: translateY(2px); }
+        .bg-preset {
+            background: #2a1f15;
+            border: none;
+            color: #ffdd99;
+            font-size: 0.8rem;
+            font-weight: bold;
+            padding: 6px 15px;
+            border-radius: 40px;
+            cursor: pointer;
+        }
+        .bg-preset.active {
+            background: #d4af37;
+            color: #2c1a0e;
+        }
+        #fileInput { display: none; }
+
+        html, body { overflow-y: auto; height: auto; }
+        @media (max-width: 700px) {
+            .control-group input[type="range"] { width: 90px; }
+            .choose-file-btn, .reset-bg-btn, .bg-preset { font-size: 0.7rem; padding: 5px 12px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <canvas id="gameCanvas" width="700" height="500" style="width:100%; height:auto; max-width:700px; aspect-ratio:700/500"></canvas>
+    
+    <div class="info-panel">
+        <span>🎯 صائد الأيم</span>
+        <span class="score-box">⭐ <span id="scoreValue">0</span></span>
+        <span class="hits-box">💥 <span id="hitsValue">0</span></span>
+        <button class="reset-btn" id="resetBtn">إعادة</button>
+    </div>
+
+    <div class="joystick-area">
+        <canvas id="joystickCanvas" width="180" height="180" style="width:180px; height:180px"></canvas>
+    </div>
+    <p style="text-align:center; color:#ddbb88; margin-top:8px; font-size:0.7rem;">👆 اسحب العصا 360° مثل ببجي لتحريك المسدس الأزرق</p>
+
+    <div class="controls-panel">
+        <div class="control-group">
+            <label>🔵 حجم الأزرق:</label>
+            <input type="range" id="blueSizeSlider" min="8" max="35" value="18" step="1">
+            <span id="blueSizeValue">18</span>
+        </div>
+        <div class="control-group">
+            <label>🔴 حجم الأحمر:</label>
+            <input type="range" id="redSizeSlider" min="10" max="45" value="22" step="1">
+            <span id="redSizeValue">22</span>
+        </div>
+        <div class="control-group">
+            <label>⚡ سرعة الأزرق:</label>
+            <input type="range" id="speedSlider" min="100" max="800" value="380" step="10">
+            <span id="speedValue">380</span>
+        </div>
+        <div class="control-group">
+            <label>🏃 سرعة الأحمر:</label>
+            <input type="range" id="redSpeedSlider" min="30" max="400" value="130" step="10">
+            <span id="redSpeedValue">130</span>
+        </div>
+    </div>
+
+    <div class="bg-section">
+        <button class="choose-file-btn" id="chooseBgBtn">📁 اختر صورة خلفية</button>
+        <button class="reset-bg-btn" id="resetBgBtn">🔄 إعادة ضبط الخلفية</button>
+        <button class="bg-preset" data-bg="forest">🌲 غابة</button>
+        <button class="bg-preset" data-bg="desert">🏜️ صحراء</button>
+        <button class="bg-preset" data-bg="sea">🌊 بحر</button>
+        <button class="bg-preset" data-bg="night">🌙 ليل</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/jpg,image/webp">
+</div>
+
+<script>
+    (function(){
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const joystickCanvas = document.getElementById('joystickCanvas');
+        const joyCtx = joystickCanvas.getContext('2d');
+        
+        let CW = 700, CH = 500;
+        canvas.width = CW; canvas.height = CH;
+        
+        let blueBall = { x: CW/2, y: CH/2, r: 18 };
+        let redTarget = { x: 150, y: 200, r: 22 };
+        let redVelocity = { x: 90, y: 70 };
+        let currentRedSpeed = 130;
+        let targetHitFlash = 0;
+        
+        let joystickActive = false;
+        let joyCenter = { x: 90, y: 90 };
+        let joyStickPos = { x: 90, y: 90 };
+        let direction = { x: 0, y: 0 };
+        let currentSpeed = 380;
+        
+        let score = 0, hits = 0;
+        let lastFrameTime = null;
+        
+        // خلفيات
+        let currentBgType = 'forest';
+        let customBgImage = null;
+        let customBgLoaded = false;
+        
+        const backgrounds = {
+            forest: { fill: "#1e3a2f", line: "#3c7a5a30" },
+            desert: { fill: "#c9a87b", line: "#b5915e30" },
+            sea: { fill: "#1a6d8f", line: "#2a8cb030" },
+            night: { fill: "#0f1722", line: "#2a3a5530" }
+        };
+        
+        // عناصر التحكم
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        const blueSizeSlider = document.getElementById('blueSizeSlider');
+        const blueSizeValue = document.getElementById('blueSizeValue');
+        const redSizeSlider = document.getElementById('redSizeSlider');
+        const redSizeValue = document.getElementById('redSizeValue');
+        const redSpeedSlider = document.getElementById('redSpeedSlider');
+        const redSpeedValue = document.getElementById('redSpeedValue');
+        
+        speedSlider.oninput = () => { currentSpeed = parseInt(speedSlider.value); speedValue.innerText = currentSpeed; };
+        blueSizeSlider.oninput = () => { blueBall.r = parseInt(blueSizeSlider.value); blueSizeValue.innerText = blueBall.r; };
+        redSizeSlider.oninput = () => { 
+            redTarget.r = parseInt(redSizeSlider.value); 
+            redSizeValue.innerText = redTarget.r;
+            redTarget.x = Math.min(CW - redTarget.r, Math.max(redTarget.r, redTarget.x));
+            redTarget.y = Math.min(CH - redTarget.r, Math.max(redTarget.r, redTarget.y));
+        };
+        redSpeedSlider.oninput = () => {
+            currentRedSpeed = parseInt(redSpeedSlider.value);
+            redSpeedValue.innerText = currentRedSpeed;
+            let spd = Math.hypot(redVelocity.x, redVelocity.y);
+            if(spd > 0.01) {
+                redVelocity.x = (redVelocity.x / spd) * currentRedSpeed;
+                redVelocity.y = (redVelocity.y / spd) * currentRedSpeed;
+            } else {
+                redVelocity.x = currentRedSpeed * 0.7;
+                redVelocity.y = currentRedSpeed * 0.7;
+            }
+        };
+        
+        // جوي ستيك
+        function drawJoystick() {
+            joyCtx.clearRect(0, 0, 180, 180);
+            joyCtx.beginPath();
+            joyCtx.arc(joyCenter.x, joyCenter.y, 65, 0, 2*Math.PI);
+            joyCtx.fillStyle = "rgba(0,0,0,0.3)";
+            joyCtx.fill();
+            joyCtx.strokeStyle = "rgba(255,255,255,0.3)";
+            joyCtx.lineWidth = 2;
+            joyCtx.stroke();
+            for(let r=25; r<=55; r+=15){
+                joyCtx.beginPath();
+                joyCtx.arc(joyCenter.x, joyCenter.y, r, 0, 2*Math.PI);
+                joyCtx.strokeStyle = "rgba(255,255,255,0.2)";
+                joyCtx.stroke();
+            }
+            joyCtx.beginPath();
+            joyCtx.arc(joyStickPos.x, joyStickPos.y, 28, 0, 2*Math.PI);
+            joyCtx.fillStyle = "#3a3a4a";
+            joyCtx.fill();
+            joyCtx.fillStyle = "#5a5a6e";
+            joyCtx.arc(joyStickPos.x, joyStickPos.y, 22, 0, 2*Math.PI);
+            joyCtx.fill();
+            joyCtx.beginPath();
+            joyCtx.arc(joyStickPos.x, joyStickPos.y, 12, 0, 2*Math.PI);
+            joyCtx.fillStyle = "#8a8aaa";
+            joyCtx.fill();
+            joyCtx.beginPath();
+            joyCtx.arc(joyStickPos.x, joyStickPos.y, 5, 0, 2*Math.PI);
+            joyCtx.fillStyle = "white";
+            joyCtx.fill();
+        }
+        
+        function resetJoystick() {
+            joyStickPos.x = joyCenter.x; joyStickPos.y = joyCenter.y;
+            direction.x = 0; direction.y = 0;
+            drawJoystick();
+        }
+        
+        // أحداث العصا
+        const joyCanvasElem = document.getElementById('joystickCanvas');
+        function handleJoyStart(e) {
+            e.preventDefault();
+            joystickActive = true;
+            const rect = joyCanvasElem.getBoundingClientRect();
+            const scaleX = joyCanvasElem.width / rect.width;
+            const scaleY = joyCanvasElem.height / rect.height;
+            let point = e.touches ? e.touches[0] : e;
+            let canvasX = (point.clientX - rect.left) * scaleX;
+            let canvasY = (point.clientY - rect.top) * scaleY;
+            let dx = canvasX - joyCenter.x, dy = canvasY - joyCenter.y;
+            let dist = Math.hypot(dx, dy);
+            let maxR = 55;
+            if(dist > maxR) { dx = dx / dist * maxR; dy = dy / dist * maxR; }
+            joyStickPos.x = joyCenter.x + dx; joyStickPos.y = joyCenter.y + dy;
+            direction.x = dx / maxR; direction.y = dy / maxR;
+            drawJoystick();
+        }
+        function handleJoyMove(e) {
+            if(!joystickActive) return;
+            e.preventDefault();
+            const rect = joyCanvasElem.getBoundingClientRect();
+            const scaleX = joyCanvasElem.width / rect.width;
+            const scaleY = joyCanvasElem.height / rect.height;
+            let point = e.touches ? e.touches[0] : e;
+            let canvasX = (point.clientX - rect.left) * scaleX;
+            let canvasY = (point.clientY - rect.top) * scaleY;
+            let dx = canvasX - joyCenter.x, dy = canvasY - joyCenter.y;
+            let dist = Math.hypot(dx, dy);
+            let maxR = 55;
+            if(dist > maxR) { dx = dx / dist * maxR; dy = dy / dist * maxR; }
+            joyStickPos.x = joyCenter.x + dx; joyStickPos.y = joyCenter.y + dy;
+            direction.x = dx / maxR; direction.y = dy / maxR;
+            drawJoystick();
+        }
+        function handleJoyEnd(e) {
+            joystickActive = false;
+            resetJoystick();
+            e.preventDefault();
+        }
+        joyCanvasElem.addEventListener('mousedown', handleJoyStart);
+        window.addEventListener('mousemove', (e) => { if(joystickActive) handleJoyMove(e); });
+        window.addEventListener('mouseup', handleJoyEnd);
+        joyCanvasElem.addEventListener('touchstart', handleJoyStart);
+        window.addEventListener('touchmove', (e) => { if(joystickActive) handleJoyMove(e); });
+        window.addEventListener('touchend', handleJoyEnd);
+        
+        // حركة الهدف
+        function updateRedMovement(delta) {
+            if(delta > 0.03) delta = 0.03;
+            let newX = redTarget.x + redVelocity.x * delta;
+            let newY = redTarget.y + redVelocity.y * delta;
+            let minX = redTarget.r, maxX = CW - redTarget.r;
+            let minY = redTarget.r, maxY = CH - redTarget.r;
+            if(newX < minX) { newX = minX + (minX - newX); redVelocity.x = Math.abs(redVelocity.x); }
+            if(newX > maxX) { newX = maxX - (newX - maxX); redVelocity.x = -Math.abs(redVelocity.x); }
+            if(newY < minY) { newY = minY + (minY - newY); redVelocity.y = Math.abs(redVelocity.y); }
+            if(newY > maxY) { newY = maxY - (newY - maxY); redVelocity.y = -Math.abs(redVelocity.y); }
+            redTarget.x = Math.min(maxX, Math.max(minX, newX));
+            redTarget.y = Math.min(maxY, Math.max(minY, newY));
+            
+            if(Math.random() < 0.02) {
+                let angle = Math.atan2(redVelocity.y, redVelocity.x);
+                angle += (Math.random() - 0.5) * 1.0;
+                redVelocity.x = Math.cos(angle) * currentRedSpeed;
+                redVelocity.y = Math.sin(angle) * currentRedSpeed;
+            }
+            let spd = Math.hypot(redVelocity.x, redVelocity.y);
+            if(Math.abs(spd - currentRedSpeed) > 3 && spd > 0.01) {
+                redVelocity.x = (redVelocity.x / spd) * currentRedSpeed;
+                redVelocity.y = (redVelocity.y / spd) * currentRedSpeed;
+            }
+        }
+        
+        // التصادم
+        function checkCollisionAndScore(nowSec) {
+            const dx = blueBall.x - redTarget.x;
+            const dy = blueBall.y - redTarget.y;
+            const distance = Math.hypot(dx, dy);
+            const collisionDist = blueBall.r + redTarget.r;
+            
+            if(distance < collisionDist) {
+                hits++;
+                score += 10;
+                document.getElementById('scoreValue').innerText = score;
+                document.getElementById('hitsValue').innerText = hits;
+                targetHitFlash = nowSec + 0.2;
+                
+                canvas.style.transform = 'scale(0.98)';
+                setTimeout(() => { canvas.style.transform = ''; }, 100);
+                
+                blueBall.x = Math.min(CW - blueBall.r, Math.max(blueBall.r, blueBall.x));
+                blueBall.y = Math.min(CH - blueBall.r, Math.max(blueBall.r, blueBall.y));
+                return true;
+            }
+            return false;
+        }
+        
+        function updateBlueMovement(delta) {
+            if(delta > 0.03) delta = 0.03;
+            let move = currentSpeed * delta;
+            let dx = direction.x * move, dy = direction.y * move;
+            let newX = blueBall.x + dx, newY = blueBall.y + dy;
+            blueBall.x = Math.min(CW - blueBall.r, Math.max(blueBall.r, newX));
+            blueBall.y = Math.min(CH - blueBall.r, Math.max(blueBall.r, newY));
+        }
+        
+        // رسم الخلفية
+        function drawBackground() {
+            if(currentBgType === 'custom' && customBgImage && customBgLoaded) {
+                ctx.drawImage(customBgImage, 0, 0, CW, CH);
+                ctx.fillStyle = "rgba(0,0,0,0.15)";
+                ctx.fillRect(0, 0, CW, CH);
+                return;
+            }
+            const bg = backgrounds[currentBgType];
+            ctx.fillStyle = bg.fill;
+            ctx.fillRect(0, 0, CW, CH);
+            for(let i=0;i<CW+CH;i+=40){
+                ctx.beginPath();
+                ctx.strokeStyle = bg.line;
+                ctx.lineWidth = 1;
+                ctx.moveTo(i,0);
+                ctx.lineTo(0,i);
+                ctx.stroke();
+            }
+            if(currentBgType === 'night') {
+                for(let i=0;i<100;i++) {
+                    ctx.fillStyle = `rgba(255,255,200,${Math.random()*0.5+0.3})`;
+                    ctx.beginPath();
+                    ctx.arc(Math.random()*CW, Math.random()*CH, Math.random()*2, 0, 2*Math.PI);
+                    ctx.fill();
+                }
+            }
+            if(currentBgType === 'sea') {
+                ctx.fillStyle = "rgba(255,255,255,0.15)";
+                for(let i=0;i<15;i++) {
+                    ctx.beginPath();
+                    ctx.ellipse(50+i*45, CH-25, 30, 6, 0, 0, 2*Math.PI);
+                    ctx.fill();
+                }
+            }
+        }
+        
+        function draw(nowSec) {
+            drawBackground();
+            
+            let greenFlash = (targetHitFlash > nowSec);
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = greenFlash ? "#00ff00" : "red";
+            ctx.beginPath();
+            ctx.arc(redTarget.x, redTarget.y, redTarget.r, 0, 2*Math.PI);
+            ctx.fillStyle = greenFlash ? "#33ff33" : "#ff3333";
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(redTarget.x, redTarget.y, redTarget.r-6, 0, 2*Math.PI);
+            ctx.fillStyle = greenFlash ? "#88ff88" : "#ff8888";
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(redTarget.x, redTarget.y, redTarget.r-12, 0, 2*Math.PI);
+            ctx.fillStyle = "#ffffff80";
+            ctx.fill();
+            
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = "#00aaff";
+            ctx.beginPath();
+            ctx.arc(blueBall.x, blueBall.y, blueBall.r, 0, 2*Math.PI);
+            ctx.fillStyle = "#3a86ff";
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(blueBall.x, blueBall.y, blueBall.r-5, 0, 2*Math.PI);
+            ctx.fillStyle = "#aae0ff";
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(blueBall.x-3, blueBall.y-3, 4, 0, 2*Math.PI);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.arc(blueBall.x, blueBall.y, 4, 0, 2*Math.PI);
+            ctx.fillStyle = "cyan";
+            ctx.fill();
+        }
+        
+        function gameLoop(nowMs) {
+            requestAnimationFrame(gameLoop);
+            const nowSec = nowMs / 1000;
+            if(lastFrameTime === null) { lastFrameTime = nowSec; return; }
+            let delta = Math.min(0.033, nowSec - lastFrameTime);
+            if(delta <= 0) { lastFrameTime = nowSec; return; }
+            updateBlueMovement(delta);
+            updateRedMovement(delta);
+            checkCollisionAndScore(nowSec);
+            draw(nowSec);
+            lastFrameTime = nowSec;
+        }
+        
+        function resetGame() {
+            score = 0; hits = 0; targetHitFlash = 0;
+            document.getElementById('scoreValue').innerText = "0";
+            document.getElementById('hitsValue').innerText = "0";
+            blueBall.x = CW/2; blueBall.y = CH/2;
+            redTarget.x = 150; redTarget.y = 200;
+            let angle = Math.random() * 2 * Math.PI;
+            redVelocity.x = Math.cos(angle) * currentRedSpeed;
+            redVelocity.y = Math.sin(angle) * currentRedSpeed;
+            resetJoystick();
+        }
+        
+        // أزرار الخلفيات
+        const fileInput = document.getElementById('fileInput');
+        const chooseBgBtn = document.getElementById('chooseBgBtn');
+        const resetBgBtn = document.getElementById('resetBgBtn');
+        const presetBtns = document.querySelectorAll('.bg-preset');
+        
+        chooseBgBtn.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        customBgImage = img;
+                        customBgLoaded = true;
+                        currentBgType = 'custom';
+                        presetBtns.forEach(btn => btn.classList.remove('active'));
+                        console.log("تم تحميل الصورة بنجاح!");
+                    };
+                    img.onerror = () => {
+                        console.log("خطأ في تحميل الصورة");
+                        alert("حدث خطأ في تحميل الصورة، جرب صورة أخرى");
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+            fileInput.value = '';
+        });
+        
+        // زر إعادة ضبط الخلفية (يرجع للغابة)
+        resetBgBtn.addEventListener('click', () => {
+            currentBgType = 'forest';
+            customBgImage = null;
+            customBgLoaded = false;
+            presetBtns.forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.bg-preset[data-bg="forest"]').classList.add('active');
+        });
+        
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentBgType = btn.getAttribute('data-bg');
+                customBgImage = null;
+                customBgLoaded = false;
+                presetBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+        
+        document.querySelector('.bg-preset[data-bg="forest"]').classList.add('active');
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+        resetGame();
+        lastFrameTime = null;
+        requestAnimationFrame(gameLoop);
+    })();
+</script>
+</body>
+</html>
